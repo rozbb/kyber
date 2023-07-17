@@ -124,6 +124,7 @@ pub fn crypto_kem_dec(
 
   if fail.into() {
     Err(KyberError::Decapsulation)
+  }
   else {
     Ok(())
   }
