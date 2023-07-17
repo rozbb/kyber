@@ -1,5 +1,6 @@
 use crate::rng::randombytes;
 use rand_core::{RngCore, CryptoRng};
+use subtle::ConstantTimeEq;
 use crate::{
   params::*,
   indcpa::*,
@@ -113,7 +114,7 @@ pub fn crypto_kem_dec(
   
   // coins are in kr[KYBER_SYMBYTES..] 
   indcpa_enc(&mut cmp, &buf, &pk, &kr[KYBER_SYMBYTES..]);
-  let fail = verify(ct, &cmp, KYBER_CIPHERTEXTBYTES);
+  let fail = !ct[..KYBER_CIPHERTEXTBYTES].ct_eq(&cmp);
   // overwrite coins in kr with H(c)
   hash_h(&mut kr[KYBER_SYMBYTES..], ct, KYBER_CIPHERTEXTBYTES);
   // Overwrite pre-k with z on re-encryption failure 
@@ -121,8 +122,9 @@ pub fn crypto_kem_dec(
   // hash concatenation of pre-k and H(c) to k 
   kdf(ss, &kr, 2*KYBER_SYMBYTES);
 
-  match fail {
-    0 => Ok(()),
-    _ => Err(KyberError::Decapsulation)
+  if fail.into() {
+    Err(KyberError::Decapsulation)
+  else {
+    Ok(())
   }
 }
